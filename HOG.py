@@ -2,6 +2,59 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+def getColor(data,r,y,x,weight):
+    height,width = data.shape
+    c_x = x
+    c_y = y
+    min_x = c_x - r
+    max_x = c_x + r
+    min_y = c_y - r
+    max_y = c_y + r
+    color = np.array([0])
+    for y in range(min_y,max_y):
+        for x in range(min_x,max_x):
+            now_x = x
+            now_y = y
+            if y < 0:
+                now_y = -y
+            if x < 0:
+                now_x = -x
+            if y > height - 1:
+                now_y = height - 1 - y
+            if x > width - 1:
+                now_x = width - x - 1
+            w = weight[x - min_x, y - min_y]
+            point = data[now_x][now_y] * w
+            color = color + point
+    return color
+
+def gaussian_fn(x,y,sigma):
+    return 1 / (2 * np.pi * sigma ** 2) * np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2))
+
+def getWeight(r, sigma):
+    weight = np.zeros((r * 2,r * 2))
+    for y in range(r * 2):
+        for x in range(r * 2):
+            bias_x  = x - r
+            bias_y = y - r
+            weight[x][y] = gaussian_fn(bias_x,bias_y,sigma)
+    total = np.sum(weight)
+    weight = weight / total    
+    return weight
+
+
+def gblur(image, r, sigma):    
+    height, width = image.shape
+    total = width * height
+    count = 0
+    data = image
+    weight = getWeight(r, sigma)
+    #print(weight.info)
+    for i in range(height):
+        for j in range(width):
+            data[i,j] = getColor(image,r,j,i,weight)
+    return data 
+
 def get_differential_filter():
     # To do
     filter_x = np.array([[1, 0, -1],
@@ -145,7 +198,7 @@ def visualize_hog(im, hog, cell_size, block_size):
 
 if __name__=='__main__':
     ori_image = cv2.imread('cameraman.tif', 0)
-    im = cv2.GaussianBlur(ori_image,(5,5),1)    
+    im = gblur(ori_image,5,1)    
     hog = extract_hog(im)
     
 
